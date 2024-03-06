@@ -1,0 +1,2 @@
+# amazed
+Another mazed generator
