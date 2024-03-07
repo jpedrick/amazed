@@ -2,6 +2,12 @@
 name = "amazed"
 version = "0.1.0"
 edition = "2021"
+keywords = ["graph", "maze", "gaming"]
+categories = ["graph", "gaming"]
+repository = "https://github.com/jpedrick/amazed"
+documentation = "https://github.com/jpedrick/amazed"
+description = "A graph maze building library"
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
