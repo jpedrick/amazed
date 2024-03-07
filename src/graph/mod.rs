@@ -4,7 +4,7 @@ use std::collections::HashMap;
 pub struct NodeLabel(usize);
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Neighbors<const MAX_NEIGHBORS: usize>([Option<usize>; MAX_NEIGHBORS], usize);
+pub struct Neighbors<T: Clone,const MAX_NEIGHBORS: usize>([Option<T>; MAX_NEIGHBORS], usize);
 
 #[derive(Debug, PartialEq)]
 pub enum AddEdgeError {
@@ -12,7 +12,10 @@ pub enum AddEdgeError {
     Exists
 }
 
-pub fn option_less_than(p: &Option<usize>,q: &Option<usize>) -> std::cmp::Ordering{
+pub trait KeyTraits: Clone + Ord + Copy + std::hash::Hash {}
+impl<T: Clone + Ord + Copy + std::hash::Hash + ?Sized> KeyTraits for T {}
+
+pub fn option_less_than<T:KeyTraits>(p: &Option<T>,q: &Option<T>) -> std::cmp::Ordering{
     match (p,q) {
         (Some(_), None) => std::cmp::Ordering::Less,
         (None, Some(_)) => std::cmp::Ordering::Greater,
@@ -21,8 +24,8 @@ pub fn option_less_than(p: &Option<usize>,q: &Option<usize>) -> std::cmp::Orderi
     }
 } 
 
-impl<const MAX_NEIGHBORS: usize> Neighbors<MAX_NEIGHBORS> {
-    pub fn append(&mut self, node_id: usize) -> Result<&mut Self, AddEdgeError> {
+impl<T:KeyTraits,const MAX_NEIGHBORS: usize> Neighbors<T,MAX_NEIGHBORS> {
+    pub fn append(&mut self, node_id: T) -> Result<&mut Self, AddEdgeError> {
         if self.1 < MAX_NEIGHBORS {
             match self.0.binary_search_by(|x| option_less_than(x,&Some(node_id))) {
                 Ok(_) => Err(AddEdgeError::Exists),
@@ -42,8 +45,8 @@ impl<const MAX_NEIGHBORS: usize> Neighbors<MAX_NEIGHBORS> {
     }
 }
 
-impl<const N: usize, const MAX_NEIGHBORS: usize> From<&[usize; N]> for Neighbors<MAX_NEIGHBORS> {
-    fn from(neighbors: &[usize; N]) -> Neighbors<MAX_NEIGHBORS> {
+impl<T:KeyTraits,const N: usize, const MAX_NEIGHBORS: usize> From<&[T; N]> for Neighbors<T,MAX_NEIGHBORS> {
+    fn from(neighbors: &[T; N]) -> Neighbors<T,MAX_NEIGHBORS> {
         let mut ns = Neighbors([None; MAX_NEIGHBORS], N);
 
         ns.0[0..N].copy_from_slice( &neighbors.map(|x|Some(x)) );
@@ -52,29 +55,29 @@ impl<const N: usize, const MAX_NEIGHBORS: usize> From<&[usize; N]> for Neighbors
     }
 }
 
-impl<const MAX_NEIGHBORS: usize> From<&[Option<usize>; MAX_NEIGHBORS]> for Neighbors<MAX_NEIGHBORS> {
-    fn from(neighbors: &[Option<usize>; MAX_NEIGHBORS]) -> Neighbors<MAX_NEIGHBORS> {
+impl<T:KeyTraits,const MAX_NEIGHBORS: usize> From<&[Option<T>; MAX_NEIGHBORS]> for Neighbors<T,MAX_NEIGHBORS> {
+    fn from(neighbors: &[Option<T>; MAX_NEIGHBORS]) -> Neighbors<T,MAX_NEIGHBORS> {
         let first_null = neighbors.iter().position(|x| x.is_none()).unwrap_or(MAX_NEIGHBORS);
 
-        Neighbors::<MAX_NEIGHBORS>(*neighbors, first_null)
+        Neighbors::<T,MAX_NEIGHBORS>(*neighbors, first_null)
     }
 }
 
-pub type GraphNodes<const MAX_NEIGHBORS: usize> = HashMap<usize, Neighbors<MAX_NEIGHBORS>>;
+pub type GraphNodes<T,const MAX_NEIGHBORS: usize> = HashMap<T, Neighbors<T,MAX_NEIGHBORS>>;
 
 #[derive(Clone, Debug)]
-pub struct Graph<const MAX_NEIGHBORS: usize>(GraphNodes<MAX_NEIGHBORS>);
+pub struct Graph<T:KeyTraits,const MAX_NEIGHBORS: usize>(GraphNodes<T,MAX_NEIGHBORS>);
 
-impl<const MAX_NEIGHBORS: usize> std::ops::Deref for Graph<MAX_NEIGHBORS> {
-    type Target = GraphNodes<MAX_NEIGHBORS>;
+impl<T:KeyTraits,const MAX_NEIGHBORS: usize> std::ops::Deref for Graph<T,MAX_NEIGHBORS> {
+    type Target = GraphNodes<T,MAX_NEIGHBORS>;
 
-    fn deref(&self) -> &GraphNodes<MAX_NEIGHBORS> {
+    fn deref(&self) -> &GraphNodes<T,MAX_NEIGHBORS> {
         &self.0
     }
 }
 
-impl<const MAX_NEIGHBORS: usize> std::ops::DerefMut for Graph<MAX_NEIGHBORS> {
-    fn deref_mut(&mut self) -> &mut GraphNodes<MAX_NEIGHBORS> {
+impl<T:KeyTraits,const MAX_NEIGHBORS: usize> std::ops::DerefMut for Graph<T,MAX_NEIGHBORS> {
+    fn deref_mut(&mut self) -> &mut GraphNodes<T,MAX_NEIGHBORS> {
         &mut self.0
     }
 }
@@ -85,16 +88,16 @@ pub enum InsertEdgeError {
     AppendEdgeError(AddEdgeError)
 }
 
-impl<const MAX_NEIGHBORS: usize> Graph<MAX_NEIGHBORS> {
+impl<T:KeyTraits,const MAX_NEIGHBORS: usize> Graph<T,MAX_NEIGHBORS> {
     pub fn new() -> Self {
         Graph(GraphNodes::new())
     }
 
-    pub fn insert<const N: usize>(&mut self, node_id: usize, neighbors: &[usize; N]) {
+    pub fn insert<const N: usize>(&mut self, node_id: T, neighbors: &[T; N]) {
         self.0.insert(node_id, Neighbors::from(neighbors));
     }
 
-    pub fn insert_edge(&mut self, from: usize, to: usize) -> Result<&mut Self, InsertEdgeError> {
+    pub fn insert_edge(&mut self, from: T, to: T) -> Result<&mut Self, InsertEdgeError> {
         if let Some(from_node) = self.0.get_mut(&from) {
             match from_node.append(to) {
                 Ok(_) => Ok(self),
