@@ -63,4 +63,18 @@ mod tests {
         assert_eq!(g.insert_edge(1, 8).err(), Some(crate::graph::InsertEdgeError::AppendEdgeError(crate::graph::AddEdgeError::Overflow)));
         assert_eq!(g.insert_edge(9, 1).err(), Some(crate::graph::InsertEdgeError::FromMissing));
     }
+
+    #[test]
+    fn test_tuple_nodes() {
+        let mut g = Graph::<(usize, usize),2>::new();
+        g.insert((0,0), &[(0,1)]);
+        g.insert((0,1), &[(0,0)]);
+
+        let s = graph::GraphNodes::<(usize, usize),2>::from([
+            ((0,0), (&[Some((0,1)), None]).into()),
+            ((0,1), (&[Some((0,0)), None]).into())
+        ]);
+        assert_eq!(*g, s);
+    }
 }
+
